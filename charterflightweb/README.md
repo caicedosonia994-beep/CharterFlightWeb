@@ -4,6 +4,19 @@
 
 Sistema de gestión de reservas de vuelos charter de lujo. Permite registrar, listar, buscar, editar y eliminar clientes VIP, conectados a una base de datos MySQL mediante JDBC con PreparedStatement (prevención de inyección SQL).
 
+## Framework utilizado
+
+| Componente | Tecnología | Justificación |
+|---|---|---|
+| Build tool | **Maven** | Gestión automática de dependencias y convenciones de estructura |
+| Vista | **JSP + JSTL + EL** | Separación de presentación y lógica, sin código Java embebido |
+| Controlador | **Servlets (javax.servlet)** | Punto único de entrada HTTP, manejo GET/POST |
+| Datos | **JDBC + PreparedStatement** | Control total sobre SQL, prevención de inyección |
+| Base de datos | **MySQL** | Sistema ligero y eficiente para aplicaciones Java web |
+| Arquitectura | **MVC (Model-View-Controller)** | Separación de responsabilidades: Model=DAO+POJO, View=JSP, Controller=Servlet |
+
+Ver [JUSTIFICACION_FRAMEWORK.md](JUSTIFICACION_FRAMEWORK.md) para detalles completos.
+
 ## Tecnologías utilizadas
 
 - **Java 21** — Lenguaje de programación
