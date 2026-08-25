@@ -14,17 +14,40 @@ import javax.servlet.http.HttpSession;
 import com.charterflight.dao.ClienteDAO;
 import com.charterflight.modelo.Cliente;
 
+/**
+ * Servlet controlador para la gestión de clientes.
+ * Maneja operaciones CRUD (registrar, listar, buscar, editar, eliminar)
+ * mediante los métodos doGet() y doPost(), delegando la lógica de datos
+ * al ClienteDAO.
+ *
+ * @author Charter Flight Development Team
+ * @version 1.0
+ */
 @WebServlet("/ClienteServlet")
 public class ClienteServlet extends HttpServlet {
 
     private static final long serialVersionUID = 1L;
     private ClienteDAO clienteDAO;
 
+    /**
+     * Inicializa el servlet creando una instancia del ClienteDAO.
+     *
+     * @throws ServletException si ocurre un error durante la inicialización
+     */
     @Override
     public void init() throws ServletException {
         clienteDAO = new ClienteDAO();
     }
 
+    /**
+     * Maneja las peticiones HTTP GET.
+     * Según el parámetro "accion" ejecuta: listar, buscar, eliminar, editar.
+     *
+     * @param request  el HttpServletRequest
+     * @param response el HttpServletResponse
+     * @throws ServletException si ocurre un error de servlet
+     * @throws IOException      si ocurre un error de entrada/salida
+     */
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -52,6 +75,15 @@ public class ClienteServlet extends HttpServlet {
         }
     }
 
+    /**
+     * Maneja las peticiones HTTP POST.
+     * Según el parámetro "accion" ejecuta: registrar, actualizar.
+     *
+     * @param request  el HttpServletRequest
+     * @param response el HttpServletResponse
+     * @throws ServletException si ocurre un error de servlet
+     * @throws IOException      si ocurre un error de entrada/salida
+     */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -74,6 +106,9 @@ public class ClienteServlet extends HttpServlet {
         }
     }
 
+    /**
+     * Lista todos los clientes y los muestra en listaclientes.jsp.
+     */
     private void listarClientes(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         List<Cliente> clientes = clienteDAO.listar();
@@ -82,6 +117,9 @@ public class ClienteServlet extends HttpServlet {
         request.getRequestDispatcher("/jsp/listaclientes.jsp").forward(request, response);
     }
 
+    /**
+     * Busca clientes por nombre, apellido o documento y los muestra en listaclientes.jsp.
+     */
     private void buscarClientes(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         String termino = request.getParameter("termino");
@@ -96,6 +134,11 @@ public class ClienteServlet extends HttpServlet {
         request.getRequestDispatcher("/jsp/listaclientes.jsp").forward(request, response);
     }
 
+    /**
+     * Registra un nuevo cliente. Valida los campos antes de insertar.
+     * Si hay errores de validación, reenvía al formulario con los errores.
+     * Si tiene éxito, redirige al listado con mensaje flash.
+     */
     private void registrarCliente(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         String nombre = request.getParameter("nombre");
@@ -129,6 +172,10 @@ public class ClienteServlet extends HttpServlet {
         response.sendRedirect(request.getContextPath() + "/ClienteServlet?accion=listar");
     }
 
+    /**
+     * Muestra el formulario de edición pre-llenado con los datos del cliente.
+     * Si id=0, muestra el formulario vacío para un nuevo cliente.
+     */
     private void mostrarFormularioEdicion(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         int idCliente = Integer.parseInt(request.getParameter("id"));
@@ -146,6 +193,11 @@ public class ClienteServlet extends HttpServlet {
         request.getRequestDispatcher("/jsp/registrarclientes.jsp").forward(request, response);
     }
 
+    /**
+     * Actualiza un cliente existente. Valida los campos antes de actualizar.
+     * Si hay errores de validación, reenvía al formulario con los errores.
+     * Si tiene éxito, redirige al listado con mensaje flash.
+     */
     private void actualizarCliente(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         int idCliente = Integer.parseInt(request.getParameter("idCliente"));
@@ -181,6 +233,9 @@ public class ClienteServlet extends HttpServlet {
         response.sendRedirect(request.getContextPath() + "/ClienteServlet?accion=listar");
     }
 
+    /**
+     * Elimina un cliente por su ID y redirige al listado con mensaje flash.
+     */
     private void eliminarCliente(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
         int idCliente = Integer.parseInt(request.getParameter("id"));
@@ -193,6 +248,18 @@ public class ClienteServlet extends HttpServlet {
         response.sendRedirect(request.getContextPath() + "/ClienteServlet?accion=listar");
     }
 
+    /**
+     * Valida todos los campos del formulario de cliente.
+     *
+     * @param nombre     el nombre del cliente
+     * @param apellido   el apellido del cliente
+     * @param documento  el documento del cliente
+     * @param telefono   el teléfono del cliente
+     * @param correo     el correo electrónico del cliente
+     * @param esEdicion indica si es una operación de edición (para excluir el cliente actual en la validación de documento único)
+     * @param idCliente  el ID del cliente en edición (0 para nuevos registros)
+     * @return lista de mensajes de error (vacía si todo es válido)
+     */
     private List<String> validarCampos(String nombre, String apellido, String documento,
                                        String telefono, String correo, boolean esEdicion, int idCliente) {
         List<String> errores = new ArrayList<>();
@@ -240,12 +307,24 @@ public class ClienteServlet extends HttpServlet {
         return errores;
     }
 
+    /**
+     * Almacena un mensaje flash (éxito/error) en la sesión para mostrarlo en la siguiente petición.
+     *
+     * @param request el HttpServletRequest
+     * @param tipo    el tipo de mensaje ("success" o "error")
+     * @param mensaje el texto del mensaje
+     */
     private void setMensajeFlash(HttpServletRequest request, String tipo, String mensaje) {
         HttpSession session = request.getSession();
         session.setAttribute("mensaje_tipo", tipo);
         session.setAttribute("mensaje_texto", mensaje);
     }
 
+    /**
+     * Transfiere el mensaje flash desde la sesión al request y lo elimina de la sesión.
+     *
+     * @param request el HttpServletRequest
+     */
     private void colocarMensajeFlash(HttpServletRequest request) {
         HttpSession session = request.getSession();
         String tipo = (String) session.getAttribute("mensaje_tipo");

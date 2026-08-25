@@ -10,6 +10,14 @@ import java.util.List;
 import com.charterflight.conexion.Conexion;
 import com.charterflight.modelo.Cliente;
 
+/**
+ * Clase DAO (Data Access Object) para la entidad Cliente.
+ * Proporciona operaciones CRUD (insertar, listar, buscar, actualizar, eliminar)
+ * utilizando PreparedStatement para prevenir inyección SQL.
+ *
+ * @author Charter Flight Development Team
+ * @version 1.0
+ */
 public class ClienteDAO {
 
     private static final String SQL_INSERT = "INSERT INTO clientes (nombre, apellido, documento, telefono, correo) VALUES (?, ?, ?, ?, ?)";
@@ -21,6 +29,12 @@ public class ClienteDAO {
     private static final String SQL_CHECK_DOCUMENTO = "SELECT COUNT(*) FROM clientes WHERE documento = ?";
     private static final String SQL_CHECK_DOCUMENTO_EXCEPTO = "SELECT COUNT(*) FROM clientes WHERE documento = ? AND id_cliente != ?";
 
+    /**
+     * Inserta un nuevo cliente en la base de datos.
+     *
+     * @param cliente el objeto Cliente a insertar
+     * @return true si la inserción fue exitosa, false en caso contrario
+     */
     public boolean insertar(Cliente cliente) {
         Connection conn = null;
         PreparedStatement ps = null;
@@ -42,6 +56,11 @@ public class ClienteDAO {
         }
     }
 
+    /**
+     * Lista todos los clientes ordenados por ID.
+     *
+     * @return lista de clientes (vacía si no hay registros)
+     */
     public List<Cliente> listar() {
         Connection conn = null;
         PreparedStatement ps = null;
@@ -62,6 +81,12 @@ public class ClienteDAO {
         return clientes;
     }
 
+    /**
+     * Busca un cliente por su ID.
+     *
+     * @param idCliente el identificador del cliente
+     * @return el Cliente encontrado, o null si no existe
+     */
     public Cliente buscarPorId(int idCliente) {
         Connection conn = null;
         PreparedStatement ps = null;
@@ -83,6 +108,12 @@ public class ClienteDAO {
         return cliente;
     }
 
+    /**
+     * Actualiza los datos de un cliente existente.
+     *
+     * @param cliente el objeto Cliente con los datos actualizados
+     * @return true si la actualización fue exitosa, false en caso contrario
+     */
     public boolean actualizar(Cliente cliente) {
         Connection conn = null;
         PreparedStatement ps = null;
@@ -105,6 +136,12 @@ public class ClienteDAO {
         }
     }
 
+    /**
+     * Elimina un cliente por su ID.
+     *
+     * @param idCliente el identificador del cliente a eliminar
+     * @return true si la eliminación fue exitosa, false en caso contrario
+     */
     public boolean eliminar(int idCliente) {
         Connection conn = null;
         PreparedStatement ps = null;
@@ -122,6 +159,12 @@ public class ClienteDAO {
         }
     }
 
+    /**
+     * Busca clientes por nombre, apellido o documento.
+     *
+     * @param termino el término de búsqueda
+     * @return lista de clientes que coinciden con la búsqueda (vacía si no hay resultados)
+     */
     public List<Cliente> buscar(String termino) {
         Connection conn = null;
         PreparedStatement ps = null;
@@ -146,6 +189,12 @@ public class ClienteDAO {
         return clientes;
     }
 
+    /**
+     * Verifica si ya existe un cliente con el documento especificado.
+     *
+     * @param documento el documento a verificar
+     * @return true si el documento ya está registrado, false en caso contrario
+     */
     public boolean existeDocumento(String documento) {
         Connection conn = null;
         PreparedStatement ps = null;
@@ -166,6 +215,14 @@ public class ClienteDAO {
         return false;
     }
 
+    /**
+     * Verifica si ya existe un cliente con el documento especificado,
+     * excluyendo al cliente con el ID indicado (para validación en edición).
+     *
+     * @param documento el documento a verificar
+     * @param idCliente el ID del cliente a excluir
+     * @return true si el documento ya está registrado por otro cliente, false en caso contrario
+     */
     public boolean existeDocumentoExcepto(String documento, int idCliente) {
         Connection conn = null;
         PreparedStatement ps = null;
@@ -187,6 +244,13 @@ public class ClienteDAO {
         return false;
     }
 
+    /**
+     * Mapea un ResultSet a un objeto Cliente.
+     *
+     * @param rs el ResultSet posicionado en una fila válida
+     * @return un objeto Cliente con los datos de la fila
+     * @throws SQLException si ocurre un error al leer las columnas
+     */
     private Cliente mapearCliente(ResultSet rs) throws SQLException {
         Cliente cliente = new Cliente();
         cliente.setIdCliente(rs.getInt("id_cliente"));

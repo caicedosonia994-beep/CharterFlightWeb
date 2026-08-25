@@ -19,4 +19,14 @@
         <url-pattern>/ClienteServlet</url-pattern>
     </servlet-mapping>
 
+    <servlet>
+        <servlet-name>ClienteApiServlet</servlet-name>
+        <servlet-class>com.charterflight.servlet.ClienteApiServlet</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>ClienteApiServlet</servlet-name>
+        <url-pattern>/api/clientes</url-pattern>
+    </servlet-mapping>
+
 </web-app>
