@@ -1,7 +1,9 @@
 package com.charterflight.servlet;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -19,6 +21,13 @@ public class ClienteApiServlet extends HttpServlet {
     private final ClienteDAO clienteDAO = new ClienteDAO();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    private void escribirJson(HttpServletResponse response, int status, Object cuerpo) throws IOException {
+        response.setStatus(status);
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        objectMapper.writeValue(response.getWriter(), cuerpo);
+    }
+
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -28,21 +37,28 @@ public class ClienteApiServlet extends HttpServlet {
 
         if (pathInfo == null || pathInfo.equals("/")) {
             List<Cliente> clientes = clienteDAO.listar();
-            objectMapper.writeValue(response.getWriter(), clientes);
+            escribirJson(response, HttpServletResponse.SC_OK, clientes);
         } else {
             String[] parts = pathInfo.split("/");
             if (parts.length >= 2) {
-                int id = Integer.parseInt(parts[1]);
+                int id;
+                try {
+                    id = Integer.parseInt(parts[1]);
+                } catch (NumberFormatException e) {
+                    escribirJson(response, HttpServletResponse.SC_BAD_REQUEST,
+                            Map.of("error", "ID no numérico"));
+                    return;
+                }
                 Cliente cliente = clienteDAO.buscarPorId(id);
                 if (cliente == null) {
-                    response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                    objectMapper.writeValue(response.getWriter(), java.util.Map.of("message", "Cliente no encontrado"));
+                    escribirJson(response, HttpServletResponse.SC_NOT_FOUND,
+                            Map.of("error", "Cliente no encontrado"));
                 } else {
-                    objectMapper.writeValue(response.getWriter(), cliente);
+                    escribirJson(response, HttpServletResponse.SC_OK, cliente);
                 }
             } else {
-                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                objectMapper.writeValue(response.getWriter(), java.util.Map.of("message", "ID inválido"));
+                escribirJson(response, HttpServletResponse.SC_BAD_REQUEST,
+                        Map.of("error", "ID inválido"));
             }
         }
     }
@@ -54,13 +70,26 @@ public class ClienteApiServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
         request.setCharacterEncoding("UTF-8");
         Cliente cliente = objectMapper.readValue(request.getReader(), Cliente.class);
+
+        String errorValidacion = validarCamposObligatorios(cliente);
+        if (errorValidacion != null) {
+            escribirJson(response, HttpServletResponse.SC_BAD_REQUEST,
+                    Map.of("error", errorValidacion));
+            return;
+        }
+
+        if (clienteDAO.existeDocumento(cliente.getDocumento())) {
+            escribirJson(response, HttpServletResponse.SC_BAD_REQUEST,
+                    Map.of("error", "El documento ya está registrado"));
+            return;
+        }
+
         boolean ok = clienteDAO.insertar(cliente);
         if (ok) {
-            response.setStatus(HttpServletResponse.SC_CREATED);
-            objectMapper.writeValue(response.getWriter(), cliente);
+            escribirJson(response, HttpServletResponse.SC_CREATED, cliente);
         } else {
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            objectMapper.writeValue(response.getWriter(), java.util.Map.of("message", "Error al crear cliente"));
+            escribirJson(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                    Map.of("error", "Error al crear cliente"));
         }
     }
 
@@ -72,25 +101,54 @@ public class ClienteApiServlet extends HttpServlet {
         request.setCharacterEncoding("UTF-8");
         String pathInfo = request.getPathInfo();
         if (pathInfo == null || pathInfo.equals("/")) {
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            objectMapper.writeValue(response.getWriter(), java.util.Map.of("message", "ID requerido"));
+            escribirJson(response, HttpServletResponse.SC_BAD_REQUEST,
+                    Map.of("error", "ID requerido"));
             return;
         }
         String[] parts = pathInfo.split("/");
         if (parts.length < 2) {
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            objectMapper.writeValue(response.getWriter(), java.util.Map.of("message", "ID inválido"));
+            escribirJson(response, HttpServletResponse.SC_BAD_REQUEST,
+                    Map.of("error", "ID inválido"));
             return;
         }
-        int id = Integer.parseInt(parts[1]);
+        int id;
+        try {
+            id = Integer.parseInt(parts[1]);
+        } catch (NumberFormatException e) {
+            escribirJson(response, HttpServletResponse.SC_BAD_REQUEST,
+                    Map.of("error", "ID no numérico"));
+            return;
+        }
+
         Cliente cliente = objectMapper.readValue(request.getReader(), Cliente.class);
         cliente.setIdCliente(id);
+
+        String errorValidacion = validarCamposObligatorios(cliente);
+        if (errorValidacion != null) {
+            escribirJson(response, HttpServletResponse.SC_BAD_REQUEST,
+                    Map.of("error", errorValidacion));
+            return;
+        }
+
+        Cliente existente = clienteDAO.buscarPorId(id);
+        if (existente == null) {
+            escribirJson(response, HttpServletResponse.SC_NOT_FOUND,
+                    Map.of("error", "Cliente no encontrado"));
+            return;
+        }
+
+        if (clienteDAO.existeDocumentoExcepto(cliente.getDocumento(), id)) {
+            escribirJson(response, HttpServletResponse.SC_BAD_REQUEST,
+                    Map.of("error", "El documento ya está registrado por otro cliente"));
+            return;
+        }
+
         boolean ok = clienteDAO.actualizar(cliente);
         if (ok) {
-            objectMapper.writeValue(response.getWriter(), cliente);
+            escribirJson(response, HttpServletResponse.SC_OK, cliente);
         } else {
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            objectMapper.writeValue(response.getWriter(), java.util.Map.of("message", "Error al actualizar cliente"));
+            escribirJson(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                    Map.of("error", "Error al actualizar cliente"));
         }
     }
 
@@ -101,23 +159,58 @@ public class ClienteApiServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
         String pathInfo = request.getPathInfo();
         if (pathInfo == null || pathInfo.equals("/")) {
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            objectMapper.writeValue(response.getWriter(), java.util.Map.of("message", "ID requerido"));
+            escribirJson(response, HttpServletResponse.SC_BAD_REQUEST,
+                    Map.of("error", "ID requerido"));
             return;
         }
         String[] parts = pathInfo.split("/");
         if (parts.length < 2) {
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            objectMapper.writeValue(response.getWriter(), java.util.Map.of("message", "ID inválido"));
+            escribirJson(response, HttpServletResponse.SC_BAD_REQUEST,
+                    Map.of("error", "ID inválido"));
             return;
         }
-        int id = Integer.parseInt(parts[1]);
+        int id;
+        try {
+            id = Integer.parseInt(parts[1]);
+        } catch (NumberFormatException e) {
+            escribirJson(response, HttpServletResponse.SC_BAD_REQUEST,
+                    Map.of("error", "ID no numérico"));
+            return;
+        }
+
+        Cliente existente = clienteDAO.buscarPorId(id);
+        if (existente == null) {
+            escribirJson(response, HttpServletResponse.SC_NOT_FOUND,
+                    Map.of("error", "Cliente no encontrado"));
+            return;
+        }
+
         boolean ok = clienteDAO.eliminar(id);
         if (ok) {
-            objectMapper.writeValue(response.getWriter(), java.util.Map.of("message", "Cliente eliminado correctamente"));
+            escribirJson(response, HttpServletResponse.SC_OK,
+                    Map.of("message", "Cliente eliminado correctamente"));
         } else {
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            objectMapper.writeValue(response.getWriter(), java.util.Map.of("message", "Error al eliminar cliente"));
+            escribirJson(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                    Map.of("error", "Error al eliminar cliente"));
         }
+    }
+
+    private String validarCamposObligatorios(Cliente cliente) {
+        if (cliente.getNombre() == null || cliente.getNombre().trim().isEmpty()) {
+            return "El campo nombre es obligatorio";
+        }
+        if (cliente.getApellido() == null || cliente.getApellido().trim().isEmpty()) {
+            return "El campo apellido es obligatorio";
+        }
+        if (cliente.getDocumento() == null || cliente.getDocumento().trim().isEmpty()) {
+            return "El campo documento es obligatorio";
+        }
+        if (cliente.getTelefono() == null || cliente.getTelefono().trim().isEmpty()) {
+            return "El campo telefono es obligatorio";
+        }
+        if (cliente.getCorreo() == null || cliente.getCorreo().trim().isEmpty()) {
+            return "El campo correo es obligatorio";
+        }
+        return null;
     }
 }

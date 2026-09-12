@@ -26,7 +26,7 @@
 
     <servlet-mapping>
         <servlet-name>ClienteApiServlet</servlet-name>
-        <url-pattern>/api/clientes</url-pattern>
+        <url-pattern>/api/clientes/*</url-pattern>
     </servlet-mapping>
 
 </web-app>
