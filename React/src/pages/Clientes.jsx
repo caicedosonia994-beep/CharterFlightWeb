@@ -7,6 +7,7 @@
  */
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { getClientes, deleteCliente } from '../services/api'
 
 export default function Clientes() {
   const [clientes, setClientes] = useState([])
@@ -20,9 +21,7 @@ export default function Clientes() {
   const fetchClientes = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/clientes')
-      if (!response.ok) throw new Error('Error al cargar clientes')
-      const data = await response.json()
+      const data = await getClientes()
       setClientes(data)
     } catch (err) {
       setError(err.message)
@@ -34,8 +33,7 @@ export default function Clientes() {
   const handleDelete = async (id) => {
     if (!confirm('¿Está seguro de eliminar este cliente?')) return
     try {
-      const response = await fetch(`/api/clientes/${id}`, { method: 'DELETE' })
-      if (!response.ok) throw new Error('Error al eliminar')
+      await deleteCliente(id)
       setClientes(clientes.filter(c => c.idCliente !== id))
     } catch (err) {
       alert(err.message)

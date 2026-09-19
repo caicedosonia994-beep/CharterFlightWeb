@@ -29,4 +29,24 @@
         <url-pattern>/api/clientes/*</url-pattern>
     </servlet-mapping>
 
+    <servlet>
+        <servlet-name>VueloApiServlet</servlet-name>
+        <servlet-class>com.charterflight.servlet.VueloApiServlet</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>VueloApiServlet</servlet-name>
+        <url-pattern>/api/vuelos/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>ReservaApiServlet</servlet-name>
+        <servlet-class>com.charterflight.servlet.ReservaApiServlet</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>ReservaApiServlet</servlet-name>
+        <url-pattern>/api/reservas/*</url-pattern>
+    </servlet-mapping>
+
 </web-app>

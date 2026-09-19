@@ -1,0 +1,6 @@
+# Archivos locales y temporales
+
+*.zip
+.postman/
+postman/
+null

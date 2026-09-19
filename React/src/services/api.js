@@ -43,3 +43,91 @@ export async function deleteCliente(id) {
   if (!response.ok) throw new Error('Error al eliminar cliente')
   return response.json()
 }
+
+export async function getVuelos() {
+  const response = await fetch(`${API_BASE}/vuelos`)
+  if (!response.ok) throw new Error('Error al obtener vuelos')
+  return response.json()
+}
+
+export async function getVuelo(id) {
+  const response = await fetch(`${API_BASE}/vuelos/${id}`)
+  if (!response.ok) throw new Error('Vuelo no encontrado')
+  return response.json()
+}
+
+export async function createVuelo(vuelo) {
+  const response = await fetch(`${API_BASE}/vuelos`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(vuelo),
+  })
+  if (!response.ok) {
+    const err = await response.json()
+    throw new Error(err.error || 'Error al crear vuelo')
+  }
+  return response.json()
+}
+
+export async function updateVuelo(id, vuelo) {
+  const response = await fetch(`${API_BASE}/vuelos/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(vuelo),
+  })
+  if (!response.ok) {
+    const err = await response.json()
+    throw new Error(err.error || 'Error al actualizar vuelo')
+  }
+  return response.json()
+}
+
+export async function deleteVuelo(id) {
+  const response = await fetch(`${API_BASE}/vuelos/${id}`, { method: 'DELETE' })
+  if (!response.ok) throw new Error('Error al eliminar vuelo')
+  return response.json()
+}
+
+export async function getReservas() {
+  const response = await fetch(`${API_BASE}/reservas`)
+  if (!response.ok) throw new Error('Error al obtener reservas')
+  return response.json()
+}
+
+export async function getReserva(id) {
+  const response = await fetch(`${API_BASE}/reservas/${id}`)
+  if (!response.ok) throw new Error('Reserva no encontrada')
+  return response.json()
+}
+
+export async function createReserva(reserva) {
+  const response = await fetch(`${API_BASE}/reservas`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(reserva),
+  })
+  if (!response.ok) {
+    const err = await response.json()
+    throw new Error(err.error || 'Error al crear reserva')
+  }
+  return response.json()
+}
+
+export async function updateReserva(id, reserva) {
+  const response = await fetch(`${API_BASE}/reservas/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(reserva),
+  })
+  if (!response.ok) {
+    const err = await response.json()
+    throw new Error(err.error || 'Error al actualizar reserva')
+  }
+  return response.json()
+}
+
+export async function deleteReserva(id) {
+  const response = await fetch(`${API_BASE}/reservas/${id}`, { method: 'DELETE' })
+  if (!response.ok) throw new Error('Error al eliminar reserva')
+  return response.json()
+}

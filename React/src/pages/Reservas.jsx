@@ -3,10 +3,19 @@
  *
  * Formulario para vincular clientes con vuelos programados.
  * Incluye selección de cliente, vuelo, pasajeros, fecha y estado.
- * Preparado para conectar con el backend cuando exista el endpoint.
+ * Conecta con el backend mediante los endpoints /api/clientes, /api/vuelos y /api/reservas.
  */
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import {
+  getClientes,
+  getVuelos,
+  getReservas,
+  getReserva,
+  createReserva,
+  updateReserva,
+  deleteReserva,
+} from '../services/api'
 
 export default function Reservas() {
   const [formData, setFormData] = useState({
@@ -16,14 +25,129 @@ export default function Reservas() {
     fechaReserva: '',
     estado: 'pendiente',
   })
+  const [clientes, setClientes] = useState([])
+  const [vuelos, setVuelos] = useState([])
+  const [reservas, setReservas] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [loadingOptions, setLoadingOptions] = useState(true)
+  const [editingId, setEditingId] = useState(null)
+  const [error, setError] = useState(null)
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
-  const handleSubmit = (e) => {
+  const loadData = async () => {
+    setLoadingOptions(true)
+    setError(null)
+    try {
+      const [clientesData, vuelosData, reservasData] = await Promise.all([
+        getClientes(),
+        getVuelos(),
+        getReservas(),
+      ])
+      setClientes(clientesData)
+      setVuelos(vuelosData)
+      setReservas(reservasData)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoadingOptions(false)
+    }
+  }
+
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    alert('Funcionalidad disponible cuando el backend implemente el endpoint de reservas.')
+    setError(null)
+
+    const payload = {
+      idCliente: formData.cliente ? parseInt(formData.cliente, 10) : 0,
+      idVuelo: formData.vuelo ? parseInt(formData.vuelo, 10) : 0,
+      pasajeros: formData.pasajeros ? parseInt(formData.pasajeros, 10) : 0,
+      fechaReserva: formData.fechaReserva,
+      estado: formData.estado,
+    }
+
+    try {
+      if (editingId) {
+        await updateReserva(editingId, payload)
+      } else {
+        await createReserva(payload)
+      }
+      setFormData({
+        cliente: '',
+        vuelo: '',
+        pasajeros: '1',
+        fechaReserva: '',
+        estado: 'pendiente',
+      })
+      setEditingId(null)
+      await loadData()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  const handleEdit = async (id) => {
+    setError(null)
+    try {
+      const data = await getReserva(id)
+      const reserva = Array.isArray(data) ? data[0] : data
+      setFormData({
+        cliente: reserva.idCliente !== undefined ? String(reserva.idCliente) : '',
+        vuelo: reserva.idVuelo !== undefined ? String(reserva.idVuelo) : '',
+        pasajeros: reserva.pasajeros !== undefined ? String(reserva.pasajeros) : '1',
+        fechaReserva: reserva.fechaReserva || '',
+        estado: reserva.estado || 'pendiente',
+      })
+      setEditingId(reserva.idReserva !== undefined ? reserva.idReserva : id)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('¿Está seguro de eliminar esta reserva?')) return
+    setError(null)
+    try {
+      await deleteReserva(id)
+      await loadData()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  const handleClear = () => {
+    setFormData({
+      cliente: '',
+      vuelo: '',
+      pasajeros: '1',
+      fechaReserva: '',
+      estado: 'pendiente',
+    })
+    setEditingId(null)
+    setError(null)
+  }
+
+  const formatClienteLabel = (cliente) => {
+    if (cliente.nombre && cliente.apellido) {
+      return `${cliente.nombre} ${cliente.apellido}`
+    }
+    if (cliente.nombre) return cliente.nombre
+    if (cliente.apellido) return cliente.apellido
+    return `Cliente #${cliente.idCliente}`
+  }
+
+  const formatVueloLabel = (vuelo) => {
+    if (vuelo.codigo && vuelo.origen && vuelo.destino) {
+      return `${vuelo.codigo} | ${vuelo.origen} -> ${vuelo.destino}`
+    }
+    if (vuelo.codigo) return vuelo.codigo
+    return `Vuelo #${vuelo.idVuelo}`
   }
 
   return (
@@ -44,9 +168,11 @@ export default function Reservas() {
               <div className="relative">
                 <select id="cliente" name="cliente" value={formData.cliente} onChange={handleChange} className="w-full bg-darkbg border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-dorado transition-colors appearance-none">
                   <option value="">Buscar cliente...</option>
-                  <option value="1">Alejandro Vega</option>
-                  <option value="2">Valentina Ríos</option>
-                  <option value="3">Roberto Castillo</option>
+                  {clientes.map((cliente) => (
+                    <option key={cliente.idCliente} value={cliente.idCliente}>
+                      {formatClienteLabel(cliente)}
+                    </option>
+                  ))}
                 </select>
                 <i className="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none"></i>
               </div>
@@ -57,9 +183,14 @@ export default function Reservas() {
               <div className="relative">
                 <select id="vuelo" name="vuelo" value={formData.vuelo} onChange={handleChange} className="w-full bg-darkbg border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-dorado transition-colors appearance-none">
                   <option value="">Seleccionar itinerario...</option>
-                  <option value="v1">CH-742 | Madrid (MAD) -&gt; Ibiza (IBZ)</option>
-                  <option value="v2">CH-910 | Barcelona (BCN) -&gt; Dubái (DXB)</option>
-                  <option value="v3">CH-115 | Londres (LHR) -&gt; Niza (NCE)</option>
+                  {vuelos.map((vuelo) => {
+                    const vueloId = vuelo.idVuelo !== undefined ? vuelo.idVuelo : vuelo.id
+                    return (
+                      <option key={vueloId} value={vueloId}>
+                        {formatVueloLabel(vuelo)}
+                      </option>
+                    )
+                  })}
                 </select>
                 <i className="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none"></i>
               </div>
@@ -88,9 +219,9 @@ export default function Reservas() {
             <div className="pt-6 flex flex-col md:flex-row gap-4">
               <button type="submit" className="flex-1 bg-dorado text-darkbg py-3.5 rounded-lg font-bold uppercase tracking-widest text-xs hover:bg-white transition-colors flex items-center justify-center space-x-2">
                 <i className="fa-solid fa-check"></i>
-                <span>Confirmar Reserva</span>
+                <span>{editingId ? 'Actualizar' : 'Confirmar'} Reserva</span>
               </button>
-              <button type="reset" onClick={() => setFormData({ cliente: '', vuelo: '', pasajeros: '1', fechaReserva: '', estado: 'pendiente' })} className="px-8 py-3.5 border border-white/10 rounded-lg font-bold uppercase tracking-widest text-xs hover:bg-white/5 transition-colors">
+              <button type="button" onClick={handleClear} className="px-8 py-3.5 border border-white/10 rounded-lg font-bold uppercase tracking-widest text-xs hover:bg-white/5 transition-colors">
                 Limpiar
               </button>
               <Link to="/" className="px-8 py-3.5 border border-white/10 rounded-lg font-bold uppercase tracking-widest text-xs hover:bg-white/5 transition-colors text-center">
@@ -98,6 +229,73 @@ export default function Reservas() {
               </Link>
             </div>
           </form>
+
+          {error && (
+            <div className="px-8 py-4 bg-red-500/10 border-t border-red-500/30">
+              <p className="text-red-400 text-sm">{error}</p>
+            </div>
+          )}
+
+          <div className="px-8 py-6 border-t border-white/5">
+            <h2 className="text-xl font-serif text-dorado mb-4">Listado de Reservas</h2>
+
+            {loading && <p className="text-gray-400">Cargando reservas...</p>}
+
+            {!loading && reservas.length === 0 && (
+              <p className="text-gray-400">No hay reservas registradas.</p>
+            )}
+
+            {!loading && reservas.length > 0 && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left text-gray-300">
+                  <thead>
+                    <tr className="border-b border-white/10">
+                      <th className="pb-3 text-xs font-bold uppercase tracking-widest text-gray-400">ID</th>
+                      <th className="pb-3 text-xs font-bold uppercase tracking-widest text-gray-400">Cliente</th>
+                      <th className="pb-3 text-xs font-bold uppercase tracking-widest text-gray-400">Vuelo</th>
+                      <th className="pb-3 text-xs font-bold uppercase tracking-widest text-gray-400">Pasajeros</th>
+                      <th className="pb-3 text-xs font-bold uppercase tracking-widest text-gray-400">Fecha Reserva</th>
+                      <th className="pb-3 text-xs font-bold uppercase tracking-widest text-gray-400">Estado</th>
+                      <th className="pb-3 text-xs font-bold uppercase tracking-widest text-gray-400">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reservas.map((reserva) => {
+                      const reservaId = reserva.idReserva !== undefined ? reserva.idReserva : reserva.id
+                      return (
+                        <tr key={reservaId} className="border-b border-white/5">
+                          <td className="py-3">{reservaId}</td>
+                          <td className="py-3">
+                            {reserva.nombreCliente || reserva.idCliente}
+                          </td>
+                          <td className="py-3">
+                            {reserva.codigoVuelo || reserva.idVuelo}
+                          </td>
+                          <td className="py-3">{reserva.pasajeros}</td>
+                          <td className="py-3">{reserva.fechaReserva}</td>
+                          <td className="py-3">{reserva.estado}</td>
+                          <td className="py-3 space-x-2">
+                            <button
+                              onClick={() => handleEdit(reservaId)}
+                              className="px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-dorado border border-dorado/30 rounded-lg hover:bg-dorado/10 transition-colors"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              onClick={() => handleDelete(reservaId)}
+                              className="px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10 transition-colors"
+                            >
+                              Eliminar
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       </main>
     </div>

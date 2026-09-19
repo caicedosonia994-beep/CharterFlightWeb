@@ -7,7 +7,8 @@
  * Navegación con useNavigate al guardar exitosamente.
  */
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
+import { getCliente, createCliente, updateCliente } from '../services/api'
 
 export default function ClienteForm() {
   const { id } = useParams()
@@ -31,9 +32,7 @@ export default function ClienteForm() {
   const fetchCliente = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`/api/clientes/${id}`)
-      if (!response.ok) throw new Error('Cliente no encontrado')
-      const data = await response.json()
+      const data = await getCliente(id)
       setFormData(data)
     } catch (err) {
       setError(err.message)
@@ -49,18 +48,11 @@ export default function ClienteForm() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
-    const method = id && id !== '0' ? 'PUT' : 'POST'
-    const url = id && id !== '0' ? `/api/clientes/${id}` : '/api/clientes'
-
     try {
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      })
-      if (!response.ok) {
-        const err = await response.json()
-        throw new Error(err.message || 'Error al guardar')
+      if (id && id !== '0') {
+        await updateCliente(id, formData)
+      } else {
+        await createCliente(formData)
       }
       navigate('/clientes')
     } catch (err) {

@@ -5,8 +5,15 @@
  * fecha, hora, tipo, capacidad y estado.
  * Preparado para conectar con el backend cuando exista el endpoint.
  */
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import {
+  getVuelos,
+  getVuelo,
+  createVuelo,
+  updateVuelo,
+  deleteVuelo,
+} from '../services/api'
 
 export default function Vuelos() {
   const [formData, setFormData] = useState({
@@ -19,14 +26,110 @@ export default function Vuelos() {
     capacidad: '',
     estado: 'programado',
   })
+  const [vuelos, setVuelos] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [error, setError] = useState(null)
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
-  const handleSubmit = (e) => {
+  const loadVuelos = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await getVuelos()
+      setVuelos(data)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadVuelos()
+  }, [])
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    alert('Funcionalidad disponible cuando el backend implemente el endpoint de vuelos.')
+    setError(null)
+
+    const payload = {
+      ...formData,
+      capacidad:
+        formData.capacidad === '' ? '' : parseInt(formData.capacidad, 10),
+    }
+
+    try {
+      if (editingId) {
+        await updateVuelo(editingId, payload)
+      } else {
+        await createVuelo(payload)
+      }
+      setFormData({
+        codigo: '',
+        origen: '',
+        destino: '',
+        fecha: '',
+        hora: '',
+        tipo: '',
+        capacidad: '',
+        estado: 'programado',
+      })
+      setEditingId(null)
+      await loadVuelos()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  const handleEdit = async (id) => {
+    setError(null)
+    try {
+      const data = await getVuelo(id)
+      const vuelo = Array.isArray(data) ? data[0] : data
+      setFormData({
+        codigo: vuelo.codigo || '',
+        origen: vuelo.origen || '',
+        destino: vuelo.destino || '',
+        fecha: vuelo.fecha || '',
+        hora: vuelo.hora || '',
+        tipo: vuelo.tipo || '',
+        capacidad: vuelo.capacidad !== undefined ? vuelo.capacidad : '',
+        estado: vuelo.estado || 'programado',
+      })
+      setEditingId(vuelo.idVuelo || id)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('¿Está seguro de eliminar este vuelo?')) return
+    setError(null)
+    try {
+      await deleteVuelo(id)
+      await loadVuelos()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  const handleClear = () => {
+    setFormData({
+      codigo: '',
+      origen: '',
+      destino: '',
+      fecha: '',
+      hora: '',
+      tipo: '',
+      capacidad: '',
+      estado: 'programado',
+    })
+    setEditingId(null)
+    setError(null)
   }
 
   return (
@@ -95,10 +198,10 @@ export default function Vuelos() {
 
             <div className="pt-6 flex flex-col md:flex-row gap-4">
               <button type="submit" className="flex-1 bg-vinotinto text-white border border-vinotinto hover:bg-vinotinto/80 py-3.5 rounded-lg font-bold uppercase tracking-widest text-xs transition-colors flex items-center justify-center space-x-2">
-                <i className="fa-solid fa-plus"></i>
-                <span>Registrar Vuelo</span>
+                <i className={editingId ? "fa-solid fa-save" : "fa-solid fa-plus"}></i>
+                <span>{editingId ? 'Actualizar' : 'Registrar'} Vuelo</span>
               </button>
-              <button type="reset" onClick={() => setFormData({ codigo: '', origen: '', destino: '', fecha: '', hora: '', tipo: '', capacidad: '', estado: 'programado' })} className="px-8 py-3.5 border border-white/10 rounded-lg font-bold uppercase tracking-widest text-xs hover:bg-white/5 transition-colors">
+              <button type="button" onClick={handleClear} className="px-8 py-3.5 border border-white/10 rounded-lg font-bold uppercase tracking-widest text-xs hover:bg-white/5 transition-colors">
                 Limpiar
               </button>
               <Link to="/" className="px-8 py-3.5 border border-white/10 rounded-lg font-bold uppercase tracking-widest text-xs hover:bg-white/5 transition-colors text-center">
@@ -106,6 +209,73 @@ export default function Vuelos() {
               </Link>
             </div>
           </form>
+
+          {error && (
+            <div className="px-8 py-4 bg-red-500/10 border-t border-red-500/30">
+              <p className="text-red-400 text-sm">{error}</p>
+            </div>
+          )}
+
+          <div className="px-8 py-6 border-t border-white/5">
+            <h2 className="text-xl font-serif text-dorado mb-4">Listado de Vuelos</h2>
+
+            {loading && <p className="text-gray-400">Cargando vuelos...</p>}
+
+            {!loading && vuelos.length === 0 && (
+              <p className="text-gray-400">No hay vuelos registrados.</p>
+            )}
+
+            {!loading && vuelos.length > 0 && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left text-gray-300">
+                  <thead>
+                    <tr className="border-b border-white/10">
+                      <th className="pb-3 text-xs font-bold uppercase tracking-widest text-gray-400">Código</th>
+                      <th className="pb-3 text-xs font-bold uppercase tracking-widest text-gray-400">Origen</th>
+                      <th className="pb-3 text-xs font-bold uppercase tracking-widest text-gray-400">Destino</th>
+                      <th className="pb-3 text-xs font-bold uppercase tracking-widest text-gray-400">Fecha</th>
+                      <th className="pb-3 text-xs font-bold uppercase tracking-widest text-gray-400">Hora</th>
+                      <th className="pb-3 text-xs font-bold uppercase tracking-widest text-gray-400">Tipo</th>
+                      <th className="pb-3 text-xs font-bold uppercase tracking-widest text-gray-400">Capacidad</th>
+                      <th className="pb-3 text-xs font-bold uppercase tracking-widest text-gray-400">Estado</th>
+                      <th className="pb-3 text-xs font-bold uppercase tracking-widest text-gray-400">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {vuelos.map((vuelo) => {
+                      const vueloId = vuelo.idVuelo
+                      return (
+                        <tr key={vueloId} className="border-b border-white/5">
+                          <td className="py-3">{vuelo.codigo}</td>
+                          <td className="py-3">{vuelo.origen}</td>
+                          <td className="py-3">{vuelo.destino}</td>
+                          <td className="py-3">{vuelo.fecha}</td>
+                          <td className="py-3">{vuelo.hora}</td>
+                          <td className="py-3">{vuelo.tipo}</td>
+                          <td className="py-3">{vuelo.capacidad}</td>
+                          <td className="py-3">{vuelo.estado}</td>
+                          <td className="py-3 space-x-2">
+                            <button
+                              onClick={() => handleEdit(vueloId)}
+                              className="px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-dorado border border-dorado/30 rounded-lg hover:bg-dorado/10 transition-colors"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              onClick={() => handleDelete(vueloId)}
+                              className="px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10 transition-colors"
+                            >
+                              Eliminar
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       </main>
     </div>
