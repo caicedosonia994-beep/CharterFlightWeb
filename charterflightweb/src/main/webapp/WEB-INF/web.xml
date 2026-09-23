@@ -49,4 +49,14 @@
         <url-pattern>/api/reservas/*</url-pattern>
     </servlet-mapping>
 
+    <servlet>
+        <servlet-name>PagoApiServlet</servlet-name>
+        <servlet-class>com.charterflight.servlet.PagoApiServlet</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>PagoApiServlet</servlet-name>
+        <url-pattern>/api/pagos/*</url-pattern>
+    </servlet-mapping>
+
 </web-app>

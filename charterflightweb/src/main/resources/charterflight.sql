@@ -39,3 +39,17 @@ CREATE TABLE IF NOT EXISTS reservas (
     CONSTRAINT fk_reservas_cliente FOREIGN KEY (id_cliente) REFERENCES clientes(id_cliente) ON DELETE RESTRICT,
     CONSTRAINT fk_reservas_vuelo FOREIGN KEY (id_vuelo) REFERENCES vuelos(id_vuelo) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS pagos (
+    id_pago         INT AUTO_INCREMENT PRIMARY KEY,
+    id_reserva      INT NOT NULL,
+    id_cliente      INT NOT NULL,
+    id_vuelo        INT NOT NULL,
+    monto           DECIMAL(10,2) NOT NULL,
+    estado          VARCHAR(30) NOT NULL DEFAULT 'Pendiente',
+    fecha_pago      DATE NOT NULL,
+    numero_factura  VARCHAR(50) NOT NULL UNIQUE,
+    CONSTRAINT fk_pagos_reserva FOREIGN KEY (id_reserva) REFERENCES reservas(id_reserva) ON DELETE RESTRICT,
+    CONSTRAINT fk_pagos_cliente FOREIGN KEY (id_cliente) REFERENCES clientes(id_cliente) ON DELETE RESTRICT,
+    CONSTRAINT fk_pagos_vuelo FOREIGN KEY (id_vuelo) REFERENCES vuelos(id_vuelo) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

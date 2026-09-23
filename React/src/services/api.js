@@ -131,3 +131,47 @@ export async function deleteReserva(id) {
   if (!response.ok) throw new Error('Error al eliminar reserva')
   return response.json()
 }
+
+export async function getPagos() {
+  const response = await fetch(`${API_BASE}/pagos`)
+  if (!response.ok) throw new Error('Error al obtener pagos')
+  return response.json()
+}
+
+export async function getPago(id) {
+  const response = await fetch(`${API_BASE}/pagos/${id}`)
+  if (!response.ok) throw new Error('Pago no encontrado')
+  return response.json()
+}
+
+export async function createPago(pago) {
+  const response = await fetch(`${API_BASE}/pagos`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(pago),
+  })
+  if (!response.ok) {
+    const err = await response.json()
+    throw new Error(err.error || 'Error al crear pago')
+  }
+  return response.json()
+}
+
+export async function updatePago(id, pago) {
+  const response = await fetch(`${API_BASE}/pagos/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(pago),
+  })
+  if (!response.ok) {
+    const err = await response.json()
+    throw new Error(err.error || 'Error al actualizar pago')
+  }
+  return response.json()
+}
+
+export async function deletePago(id) {
+  const response = await fetch(`${API_BASE}/pagos/${id}`, { method: 'DELETE' })
+  if (!response.ok) throw new Error('Error al eliminar pago')
+  return response.json()
+}
