@@ -1,12 +1,6 @@
--- =========================================================================
+﻿-- =========================================================================
 -- Charter Flight - Script de creacion de base de datos
 -- =========================================================================
-
-CREATE DATABASE IF NOT EXISTS charterflight
-    CHARACTER SET utf8mb4
-    COLLATE utf8mb4_unicode_ci;
-
-USE charterflight;
 
 CREATE TABLE IF NOT EXISTS clientes (
     id_cliente  INT AUTO_INCREMENT PRIMARY KEY,
@@ -49,7 +43,31 @@ CREATE TABLE IF NOT EXISTS pagos (
     estado          VARCHAR(30) NOT NULL DEFAULT 'Pendiente',
     fecha_pago      DATE NOT NULL,
     numero_factura  VARCHAR(50) NOT NULL UNIQUE,
-    CONSTRAINT fk_pagos_reserva FOREIGN KEY (id_reserva) REFERENCES reservas(id_reserva) ON DELETE RESTRICT,
+CONSTRAINT fk_pagos_reserva FOREIGN KEY (id_reserva) REFERENCES reservas(id_reserva) ON DELETE RESTRICT,
     CONSTRAINT fk_pagos_cliente FOREIGN KEY (id_cliente) REFERENCES clientes(id_cliente) ON DELETE RESTRICT,
     CONSTRAINT fk_pagos_vuelo FOREIGN KEY (id_vuelo) REFERENCES vuelos(id_vuelo) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================================================================
+-- Solicitudes de vuelos especiales (carga / corporativo)
+-- No crea reservas confirmadas ni asigna tarifas automaticamente.
+-- =========================================================================
+
+CREATE TABLE IF NOT EXISTS solicitudes_especiales (
+    id_solicitud        INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_contacto     VARCHAR(100) NOT NULL,
+    correo_contacto     VARCHAR(100) NOT NULL,
+    telefono_contacto   VARCHAR(30)  NOT NULL,
+    tipo                VARCHAR(20)  NOT NULL,
+    origen              VARCHAR(100) NOT NULL,
+    destino             VARCHAR(100) NOT NULL,
+    fecha_req           DATE         NOT NULL,
+    tipo_servicio       VARCHAR(30)  NOT NULL,
+    observaciones       TEXT,
+    tipo_mercancia      VARCHAR(100),
+    descripcion_carga   TEXT,
+    motivo_viaje        VARCHAR(200),
+    pasajeros_estimados INT,
+    estado              VARCHAR(30)  NOT NULL DEFAULT 'Pendiente de revisión',
+    fecha_solicitud     TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

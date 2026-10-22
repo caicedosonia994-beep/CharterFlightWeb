@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 
 <web-app xmlns="http://Java.sun.com/xml/ns/javaee"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -8,6 +8,16 @@
          metadata-complete="true">
 
     <display-name>Charter Flight Web</display-name>
+
+    <filter>
+        <filter-name>CorsFilter</filter-name>
+        <filter-class>com.charterflight.filtro.CorsFilter</filter-class>
+    </filter>
+
+    <filter-mapping>
+        <filter-name>CorsFilter</filter-name>
+        <url-pattern>/api/*</url-pattern>
+    </filter-mapping>
 
     <servlet>
         <servlet-name>ClienteServlet</servlet-name>
@@ -59,4 +69,29 @@
         <url-pattern>/api/pagos/*</url-pattern>
     </servlet-mapping>
 
+
+    <servlet>
+        <servlet-name>SolicitudEspecialApiServlet</servlet-name>
+        <servlet-class>com.charterflight.servlet.SolicitudEspecialApiServlet</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>SolicitudEspecialApiServlet</servlet-name>
+        <url-pattern>/api/solicitudes-especiales/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>BackofficeApiServlet</servlet-name>
+        <servlet-class>com.charterflight.servlet.BackofficeApiServlet</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>BackofficeApiServlet</servlet-name>
+        <url-pattern>/api/operaciones-cobrables/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet-mapping>
+        <servlet-name>BackofficeApiServlet</servlet-name>
+        <url-pattern>/api/reportes/*</url-pattern>
+    </servlet-mapping>
 </web-app>

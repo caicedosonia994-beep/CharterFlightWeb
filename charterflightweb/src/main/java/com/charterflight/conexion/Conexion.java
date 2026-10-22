@@ -16,9 +16,8 @@ import java.sql.SQLException;
  */
 public class Conexion {
 
-    private static final String JDBC_URL = "jdbc:mysql://localhost:3306/charterflight?useSSL=false&serverTimezone=UTC";
-    private static final String JDBC_USER = "root";
-    private static final String JDBC_PASSWORD = "";
+    private static final String JDBC_URL_LOCAL = "jdbc:mysql://localhost:3306/charterflight?useSSL=false&serverTimezone=UTC";
+    private static final String JDBC_USER_LOCAL = "root";
 
     static {
         try {
@@ -35,7 +34,10 @@ public class Conexion {
      * @throws SQLException si ocurre un error de conexión
      */
     public static Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(JDBC_URL, JDBC_USER, JDBC_PASSWORD);
+        String url = System.getenv().getOrDefault("DB_URL", JDBC_URL_LOCAL);
+        String user = System.getenv().getOrDefault("DB_USER", JDBC_USER_LOCAL);
+        String password = System.getenv().getOrDefault("DB_PASSWORD", "");
+        return DriverManager.getConnection(url, user, password);
     }
 
     /**

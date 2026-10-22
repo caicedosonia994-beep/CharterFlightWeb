@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+﻿import { Routes, Route } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import Home from './pages/Home'
@@ -20,7 +20,7 @@ export default function App() {
           <Route path="/clientes" element={<Clientes />} />
           <Route path="/clientes/nuevo" element={<ClienteForm id="0" />} />
           <Route path="/clientes/editar/:id" element={<ClienteForm />} />
-          <Route path="/vuelos" element={<Vuelos />} />
+          <Route path="/vuelos/*" element={<Vuelos />} />
           <Route path="/reservas" element={<Reservas />} />
           <Route path="/pagos" element={<Pagos />} />
           <Route path="/reportes" element={<Reportes />} />

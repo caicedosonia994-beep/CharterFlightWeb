@@ -71,7 +71,7 @@ public class ClienteApiServlet extends HttpServlet {
         request.setCharacterEncoding("UTF-8");
         Cliente cliente = objectMapper.readValue(request.getReader(), Cliente.class);
 
-        String errorValidacion = validarCamposObligatorios(cliente);
+        String errorValidacion = validarCliente(cliente);
         if (errorValidacion != null) {
             escribirJson(response, HttpServletResponse.SC_BAD_REQUEST,
                     Map.of("error", errorValidacion));
@@ -123,7 +123,7 @@ public class ClienteApiServlet extends HttpServlet {
         Cliente cliente = objectMapper.readValue(request.getReader(), Cliente.class);
         cliente.setIdCliente(id);
 
-        String errorValidacion = validarCamposObligatorios(cliente);
+        String errorValidacion = validarCliente(cliente);
         if (errorValidacion != null) {
             escribirJson(response, HttpServletResponse.SC_BAD_REQUEST,
                     Map.of("error", errorValidacion));
@@ -195,22 +195,73 @@ public class ClienteApiServlet extends HttpServlet {
         }
     }
 
-    private String validarCamposObligatorios(Cliente cliente) {
-        if (cliente.getNombre() == null || cliente.getNombre().trim().isEmpty()) {
+    private static final int MIN_LONGITUD_TEXTO = 2;
+    private static final int MAX_LONGITUD_NOMBRE = 100;
+    private static final int MAX_LONGITUD_APELLIDO = 100;
+    private static final int MIN_LONGITUD_DOCUMENTO = 5;
+    private static final int MAX_LONGITUD_DOCUMENTO = 50;
+    private static final int MIN_LONGITUD_TELEFONO = 7;
+    private static final int MAX_LONGITUD_TELEFONO = 30;
+    private static final int MIN_LONGITUD_CORREO = 5;
+    private static final int MAX_LONGITUD_CORREO = 100;
+    private static final String REGEX_NOMBRE = "^[A-Za-zÀ-ÿ\\s\\'-]+$";
+    private static final String REGEX_TELEFONO = "^[0-9+\\s\\-()]+$";
+    private static final String REGEX_CORREO = "^[A-Za-z0-9._%+\\-]+@[A-Za-z0-9.\\-]+\\.[A-Za-z]{2,}$";
+
+    private String validarCliente(Cliente cliente) {
+        String nombre = cliente.getNombre();
+        String apellido = cliente.getApellido();
+        String documento = cliente.getDocumento();
+        String telefono = cliente.getTelefono();
+        String correo = cliente.getCorreo();
+
+        if (nombre == null || nombre.trim().isEmpty()) {
             return "El campo nombre es obligatorio";
         }
-        if (cliente.getApellido() == null || cliente.getApellido().trim().isEmpty()) {
+        if (apellido == null || apellido.trim().isEmpty()) {
             return "El campo apellido es obligatorio";
         }
-        if (cliente.getDocumento() == null || cliente.getDocumento().trim().isEmpty()) {
+        if (documento == null || documento.trim().isEmpty()) {
             return "El campo documento es obligatorio";
         }
-        if (cliente.getTelefono() == null || cliente.getTelefono().trim().isEmpty()) {
+        if (telefono == null || telefono.trim().isEmpty()) {
             return "El campo telefono es obligatorio";
         }
-        if (cliente.getCorreo() == null || cliente.getCorreo().trim().isEmpty()) {
+        if (correo == null || correo.trim().isEmpty()) {
             return "El campo correo es obligatorio";
         }
+
+        if (nombre.trim().length() < MIN_LONGITUD_TEXTO || nombre.trim().length() > MAX_LONGITUD_NOMBRE) {
+            return "El nombre debe tener entre " + MIN_LONGITUD_TEXTO + " y " + MAX_LONGITUD_NOMBRE + " caracteres";
+        }
+        if (apellido.trim().length() < MIN_LONGITUD_TEXTO || apellido.trim().length() > MAX_LONGITUD_APELLIDO) {
+            return "El apellido debe tener entre " + MIN_LONGITUD_TEXTO + " y " + MAX_LONGITUD_APELLIDO + " caracteres";
+        }
+        if (documento.trim().length() < MIN_LONGITUD_DOCUMENTO || documento.trim().length() > MAX_LONGITUD_DOCUMENTO) {
+            return "El documento debe tener entre " + MIN_LONGITUD_DOCUMENTO + " y " + MAX_LONGITUD_DOCUMENTO + " caracteres";
+        }
+        if (telefono.trim().length() < MIN_LONGITUD_TELEFONO || telefono.trim().length() > MAX_LONGITUD_TELEFONO) {
+            return "El telefono debe tener entre " + MIN_LONGITUD_TELEFONO + " y " + MAX_LONGITUD_TELEFONO + " caracteres";
+        }
+        if (!telefono.matches(".*\\d.*")) {
+            return "El telefono debe contener al menos un numero";
+        }
+        if (!telefono.trim().matches(REGEX_TELEFONO)) {
+            return "El telefono solo debe contener numeros, espacios, + o -";
+        }
+        if (correo.trim().length() < MIN_LONGITUD_CORREO || correo.trim().length() > MAX_LONGITUD_CORREO) {
+            return "El correo debe tener entre " + MIN_LONGITUD_CORREO + " y " + MAX_LONGITUD_CORREO + " caracteres";
+        }
+        if (!correo.trim().matches(REGEX_CORREO)) {
+            return "El correo electronico no tiene un formato valido";
+        }
+        if (!nombre.trim().matches(REGEX_NOMBRE)) {
+            return "El nombre solo debe contener letras, espacios o apostrofos";
+        }
+        if (!apellido.trim().matches(REGEX_NOMBRE)) {
+            return "El apellido solo debe contener letras, espacios o apostrofos";
+        }
+
         return null;
     }
 }

@@ -1,173 +1,111 @@
-/**
- * Reportes - Página de reportes y análisis.
- *
- * Dashboard con estadísticas operativas y financieras.
- * Gráfico de ingresos construido con SVG puro.
- * Preparado para conectar con el backend cuando exista el endpoint.
- */
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { exportarReporte, getReporte } from '../services/api'
+
+const tiposReporte = [
+  { id: 'clientes', titulo: 'Clientes' },
+  { id: 'vuelos', titulo: 'Vuelos' },
+  { id: 'solicitudes', titulo: 'Solicitudes especiales' },
+  { id: 'financiero', titulo: 'Financiero' },
+]
+const aeronaves = ['Beechcraft 1900D', 'LET L-410', 'Piper Navajo']
+const medios = ['Transferencia bancaria', 'Tarjeta débito', 'Tarjeta de crédito', 'Efectivo', 'Nequi', 'Daviplata', 'PSE']
+const labelClass = 'mb-2 block text-[10px] font-bold uppercase tracking-widest text-white/55'
+const inputClass = 'w-full rounded-lg border border-white/10 bg-[#0D0D0D] px-3 py-2.5 text-sm text-[#F5F2EA] outline-none focus:border-[#C9A227]'
+
+function dinero(valor) {
+  if (valor === null || valor === undefined || valor === '') return 'No registrado'
+  return `$ ${Number(valor || 0).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+function mostrar(valor) {
+  if (valor === null || valor === undefined || valor === '') return 'No disponible'
+  if (typeof valor === 'object') return JSON.stringify(valor)
+  return String(valor)
+}
 
 export default function Reportes() {
-  const [stats] = useState([
-    { label: 'Clientes Registrados', value: '1,248', change: '+12%', icon: 'fa-users', positive: true },
-    { label: 'Vuelos Disponibles', value: '32', change: '8 Activos', icon: 'fa-plane', positive: true },
-    { label: 'Reservas Activas', value: '86', change: '94% Ocup.', icon: 'fa-calendar-check', positive: true },
-    { label: 'Ingresos Totales', value: '$2.4M', change: '+18.5%', icon: 'fa-sack-dollar', positive: true },
-  ])
+  const [tipo, setTipo] = useState('clientes')
+  const [filtros, setFiltros] = useState({ fechaInicio: '', fechaFin: '', estado: '', tipoServicio: '', avion: '', medioPago: '', tipoOperacion: '' })
+  const [reporte, setReporte] = useState(null)
+  const [cargando, setCargando] = useState(true)
+  const [error, setError] = useState('')
+  const [exportando, setExportando] = useState('')
 
-  const [chartData] = useState({
-    labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
-    vuelos: [120, 150, 140, 190, 240, 210],
-    proyeccion: [80, 110, 100, 150, 200, 180],
-  })
+  const cargar = useCallback(async () => {
+    setCargando(true)
+    setError('')
+    try { setReporte(await getReporte(tipo, filtros)) }
+    catch (err) { setReporte(null); setError(err.message || 'No fue posible cargar el reporte.') }
+    finally { setCargando(false) }
+  }, [tipo, filtros])
 
-  const maxValor = Math.max(...chartData.vuelos, ...chartData.proyeccion)
-  const anchoGrafico = 800
-  const altoGrafico = 300
-  const padding = { top: 20, right: 20, bottom: 40, left: 50 }
-  const anchoUtil = anchoGrafico - padding.left - padding.right
-  const altoUtil = altoGrafico - padding.top - padding.bottom
+  useEffect(() => {
+    const timer = window.setTimeout(cargar, 0)
+    return () => window.clearTimeout(timer)
+  }, [cargar])
 
-  const puntosVuelos = chartData.vuelos.map((valor, indice) => {
-    const x = padding.left + (indice / (chartData.labels.length - 1)) * anchoUtil
-    const y = padding.top + altoUtil - (valor / maxValor) * altoUtil
-    return { x, y }
-  })
+  const cambiarFiltro = (evento) => setFiltros((actual) => ({ ...actual, [evento.target.name]: evento.target.value }))
 
-  const puntosProyeccion = chartData.proyeccion.map((valor, indice) => {
-    const x = padding.left + (indice / (chartData.labels.length - 1)) * anchoUtil
-    const y = padding.top + altoUtil - (valor / maxValor) * altoUtil
-    return { x, y }
-  })
-
-  const generarPath = (puntos) => {
-    return puntos.map((punto, i) => `${i === 0 ? 'M' : 'L'} ${punto.x} ${punto.y}`).join(' ')
+  const descargar = async (formato) => {
+    setExportando(formato); setError('')
+    try {
+      const archivo = await exportarReporte(tipo, formato, filtros)
+      const url = URL.createObjectURL(archivo)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `CharterFlight_${tipo}_${new Date().toISOString().slice(0, 10)}.${formato === 'excel' ? 'xlsx' : 'pdf'}`
+      document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url)
+    } catch (err) { setError(err.message || `No fue posible generar ${formato.toUpperCase()}.`) }
+    finally { setExportando('') }
   }
 
-  const generarArea = (puntos) => {
-    const path = generarPath(puntos)
-    const ultimo = puntos[puntos.length - 1]
-    const primero = puntos[0]
-    return `${path} L ${ultimo.x} ${altoGrafico - padding.bottom} L ${primero.x} ${altoGrafico - padding.bottom} Z`
+  const resumen = reporte?.resumen || {}
+  const etiquetasResumen = {
+    totalClientes: 'Clientes registrados', totalVuelos: 'Vuelos programados', totalReservas: 'Reservas',
+    pasajerosReservados: 'Pasajeros reservados', totalSolicitudes: 'Solicitudes', pasajeros: 'Pasajeros', carga: 'Carga',
+    cantidadMovimientos: 'Pagos y movimientos consultados', movimientosConfirmados: 'Pagos confirmados o recibidos', operaciones: 'Operaciones cobrables', pagosAnteriores: 'Pagos de reservas existentes',
+    valorAcordado: 'Valor acordado registrado', recibidoEnPeriodo: 'Recibido en el período', saldoPendienteActual: 'Saldo pendiente actual',
   }
+  const metricas = Object.entries(resumen).filter(([clave, valor]) => clave !== 'porMedioPago' && (valor === null || typeof valor !== 'object') && etiquetasResumen[clave])
 
   return (
-    <div className="min-h-screen bg-darkbg text-white">
-      <main className="flex-1 p-6 lg:p-12">
-        <div className="max-w-7xl mx-auto">
-          <header className="mb-12 flex justify-between items-end">
-            <div>
-              <h1 className="text-3xl font-serif text-white">Panel de Control Ejecutivo</h1>
-              <p className="text-gray-400 text-sm mt-1">Visión general del rendimiento operativo y financiero.</p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs font-bold uppercase tracking-widest text-dorado mb-1">Mayo 2026</p>
-              <p className="text-gray-500 text-xs">Actualizado hace 5 min</p>
-            </div>
-          </header>
+    <div className="min-h-screen bg-[#0D0D0D] px-4 py-8 text-[#F5F2EA] md:px-8">
+      <main className="mx-auto max-w-7xl space-y-7">
+        <header className="flex flex-wrap items-end justify-between gap-4">
+          <div><p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-[#A32646]">Datos del sistema</p><h1 className="font-serif text-3xl">Reportes</h1><p className="mt-2 text-sm text-white/50">Consultas reales de Charter Flight. Los importes solo se muestran cuando están registrados.</p></div>
+          <button type="button" onClick={cargar} disabled={cargando} className="rounded-lg border border-white/15 px-4 py-2 text-xs font-bold uppercase tracking-widest hover:border-[#C9A227] hover:text-[#C9A227]">Actualizar datos</button>
+        </header>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-            {stats.map((stat, index) => (
-              <div key={index} className="stat-card p-6 rounded-2xl border border-white/5">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="p-2 bg-vinotinto/30 rounded-lg border border-vinotinto/50">
-                    <i className={`fa-solid ${stat.icon} text-dorado`}></i>
-                  </div>
-                  <span className={`text-xs font-bold ${stat.positive ? 'text-green-500' : 'text-red-400'}`}>{stat.change}</span>
-                </div>
-                <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-1">{stat.label}</p>
-                <h3 className="text-3xl font-serif">{stat.value}</h3>
-              </div>
-            ))}
+        <nav className="flex flex-wrap gap-2" aria-label="Tipo de reporte">
+          {tiposReporte.map((item) => <button key={item.id} type="button" onClick={() => setTipo(item.id)} className={`rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-wider transition ${tipo === item.id ? 'border-[#C9A227] bg-[#C9A227] text-[#0D0D0D]' : 'border-white/15 text-white/65 hover:border-[#A32646] hover:text-white'}`}>{item.titulo}</button>)}
+        </nav>
+
+        <section className="rounded-2xl border border-white/10 bg-[#171717] p-5">
+          <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-[#C9A227]">Filtros</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {tipo !== 'clientes' && <label><span className={labelClass}>{tipo === 'financiero' ? 'Fecha inicial del pago' : 'Fecha inicial'}</span><input className={inputClass} type="date" name="fechaInicio" value={filtros.fechaInicio} onChange={cambiarFiltro} /></label>}
+            {tipo !== 'clientes' && <label><span className={labelClass}>{tipo === 'financiero' ? 'Fecha final del pago' : 'Fecha final'}</span><input className={inputClass} type="date" name="fechaFin" value={filtros.fechaFin} onChange={cambiarFiltro} /></label>}
+            {tipo !== 'clientes' && <label><span className={labelClass}>Estado</span><select className={inputClass} name="estado" value={filtros.estado} onChange={cambiarFiltro}><option value="">Todos</option>{(tipo === 'financiero' ? ['Confirmado', 'Rechazado', 'Pagado', 'Pendiente', 'Cancelado'] : tipo === 'vuelos' ? ['programado', 'activo', 'cancelado', 'completado'] : ['Pendiente de revisión', 'En revisión', 'Aprobada', 'Rechazada']).map((estado) => <option key={estado}>{estado}</option>)}</select></label>}
+            {(tipo === 'solicitudes' || tipo === 'financiero') && <label><span className={labelClass}>Tipo de servicio</span><select className={inputClass} name="tipoServicio" value={filtros.tipoServicio} onChange={cambiarFiltro}><option value="">Todos</option>{['Chárter privado', 'Corporativo', 'Transporte especializado'].map((servicio) => <option key={servicio}>{servicio}</option>)}</select></label>}
+            {(tipo === 'solicitudes' || tipo === 'financiero') && <label><span className={labelClass}>Tipo de avión</span><select className={inputClass} name="avion" value={filtros.avion} onChange={cambiarFiltro}><option value="">Todos</option>{aeronaves.map((avion) => <option key={avion}>{avion}</option>)}</select></label>}
+            {tipo === 'financiero' && <label><span className={labelClass}>Medio de pago</span><select className={inputClass} name="medioPago" value={filtros.medioPago} onChange={cambiarFiltro}><option value="">Todos</option>{medios.map((medio) => <option key={medio}>{medio}</option>)}</select></label>}
+            {tipo === 'financiero' && <label><span className={labelClass}>Tipo de operación</span><select className={inputClass} name="tipoOperacion" value={filtros.tipoOperacion} onChange={cambiarFiltro}><option value="">Todos</option><option value="VUELO_PROGRAMADO">Vuelo programado</option><option value="SOLICITUD_ESPECIAL">Solicitud especial</option></select></label>}
           </div>
+          <p className="mt-4 text-[11px] text-white/40">Los filtros actualizan los indicadores, la tabla y las exportaciones. En el informe financiero, las fechas limitan los movimientos; los saldos muestran el estado actual de cada operación consultada.</p>
+        </section>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 bg-surface p-8 rounded-2xl border border-white/5">
-              <h4 className="text-lg font-serif mb-6 text-dorado">Evolución de Ingresos</h4>
-              <div className="overflow-x-auto">
-                <svg viewBox={`0 0 ${anchoGrafico} ${altoGrafico}`} className="w-full min-w-[600px]">
-                  <rect x={padding.left} y={padding.top} width={anchoUtil} height={altoUtil} fill="none" />
-                  {[0, 0.25, 0.5, 0.75, 1].map((tick, i) => {
-                    const y = padding.top + altoUtil - tick * altoUtil
-                    const valor = Math.round(tick * maxValor)
-                    return (
-                      <g key={i}>
-                        <line x1={padding.left} y1={y} x2={anchoGrafico - padding.right} y2={y} stroke="rgba(255,255,255,0.05)" />
-                        <text x={padding.left - 10} y={y + 4} textAnchor="end" fill="#6b7280" fontSize="10">{valor}</text>
-                      </g>
-                    )
-                  })}
-                  {chartData.labels.map((label, i) => {
-                    const x = padding.left + (i / (chartData.labels.length - 1)) * anchoUtil
-                    return (
-                      <text key={i} x={x} y={altoGrafico - 10} textAnchor="middle" fill="#6b7280" fontSize="10">
-                        {label}
-                      </text>
-                    )
-                  })}
-                  <path d={generarArea(puntosProyeccion)} fill="rgba(90, 15, 36, 0.4)" />
-                  <path d={generarPath(puntosProyeccion)} fill="none" stroke="#5A0F24" strokeWidth="2" />
-                  <path d={generarArea(puntosVuelos)} fill="rgba(212, 175, 55, 0.05)" />
-                  <path d={generarPath(puntosVuelos)} fill="none" stroke="#D4AF37" strokeWidth="3" />
-                  {puntosVuelos.map((punto, i) => (
-                    <circle key={i} cx={punto.x} cy={punto.y} r="4" fill="#D4AF37" />
-                  ))}
-                </svg>
-              </div>
-              <div className="flex items-center justify-center space-x-6 mt-4 text-xs text-gray-500">
-                <div className="flex items-center space-x-2">
-                  <span className="w-3 h-3 rounded-full bg-dorado"></span>
-                  <span>Vuelos Realizados</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="w-3 h-3 rounded-full bg-vinotinto"></span>
-                  <span>Proyección</span>
-                </div>
-              </div>
-            </div>
+        {error && <p role="alert" className="rounded-lg border border-[#A32646]/60 bg-[#A32646]/15 p-4 text-sm text-red-200">{error}</p>}
 
-            <div className="bg-surface p-8 rounded-2xl border border-white/5">
-              <h4 className="text-lg font-serif mb-6 text-dorado">Actividad Reciente</h4>
-              <div className="space-y-6">
-                <div className="flex items-center space-x-4">
-                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Nueva Reserva Confirmada</p>
-                    <p className="text-xs text-gray-500">Alejandro Vega - Vuelo CH-742</p>
-                  </div>
-                  <span className="text-[10px] text-gray-600">2 min</span>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <div className="w-2 h-2 rounded-full bg-dorado"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Vuelo Programado</p>
-                    <p className="text-xs text-gray-500">Ruta MAD -&gt; IBZ registrada</p>
-                  </div>
-                  <span className="text-[10px] text-gray-600">45 min</span>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <div className="w-2 h-2 rounded-full bg-vinotinto"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Pago Recibido</p>
-                    <p className="text-xs text-gray-500">Ref: INV-88229 - $12,500</p>
-                  </div>
-                  <span className="text-[10px] text-gray-600">2h</span>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <div className="w-2 h-2 rounded-full bg-gray-600"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Cliente Actualizado</p>
-                    <p className="text-xs text-gray-500">Preferencias de catering VR</p>
-                  </div>
-                  <span className="text-[10px] text-gray-600">5h</span>
-                </div>
-              </div>
-              <button onClick={() => alert('Funcionalidad disponible cuando el backend implemente el endpoint de reportes.')} className="w-full mt-8 py-3 border border-white/10 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-white/5 transition-colors">
-                Ver todo el historial
-              </button>
-            </div>
-          </div>
-        </div>
+        {metricas.length > 0 && <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {metricas.map(([clave, valor]) => <article key={clave} className="rounded-xl border border-white/10 bg-[#171717] p-5"><p className="text-[10px] font-bold uppercase tracking-widest text-white/45">{etiquetasResumen[clave]}</p><p className="mt-2 font-serif text-2xl text-[#C9A227]">{['valorAcordado', 'recibidoEnPeriodo', 'saldoPendienteActual'].includes(clave) ? dinero(valor) : Number(valor).toLocaleString('es-CO')}</p></article>)}
+        </section>}
+
+        {tipo === 'financiero' && resumen.porMedioPago && <section className="rounded-xl border border-white/10 bg-[#171717] p-5"><h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-[#C9A227]">Recibido por medio de pago</h2><div className="flex flex-wrap gap-x-7 gap-y-2 text-sm">{Object.entries(resumen.porMedioPago).length ? Object.entries(resumen.porMedioPago).map(([medio, total]) => <span key={medio}>{medio}: <b>{dinero(total)}</b></span>) : <span className="text-white/50">No hay pagos confirmados en este resultado.</span>}</div></section>}
+
+        <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#171717]">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 p-5"><div><h2 className="font-serif text-xl">{reporte?.titulo || 'Resultados'}</h2><p className="mt-1 text-xs text-white/45">{reporte?.generado ? `Consultado: ${String(reporte.generado).replace('T', ' ').slice(0, 19)}` : ''}</p></div><div className="flex gap-2"><button type="button" onClick={() => descargar('excel')} disabled={cargando || exportando !== '' || !reporte?.filas?.length} className="rounded-lg border border-[#C9A227]/50 px-4 py-2 text-xs font-bold uppercase tracking-widest text-[#C9A227] hover:bg-[#C9A227]/10 disabled:opacity-40">{exportando === 'excel' ? 'Generando…' : 'Excel .xlsx'}</button><button type="button" onClick={() => descargar('pdf')} disabled={cargando || exportando !== '' || !reporte?.filas?.length} className="rounded-lg border border-[#A32646] px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-[#A32646]/20 disabled:opacity-40">{exportando === 'pdf' ? 'Generando…' : 'PDF'}</button></div></div>
+          {cargando ? <p className="p-8 text-sm text-white/50">Consultando la base de datos…</p> : !reporte?.filas?.length ? <p className="p-8 text-sm text-white/50">No hay datos para mostrar con los filtros seleccionados.</p> : <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-[#0D0D0D] text-[10px] uppercase tracking-wider text-white/45"><tr>{reporte.columnas.map((columna) => <th key={columna.clave} className="px-4 py-3">{columna.titulo}</th>)}</tr></thead><tbody>{reporte.filas.map((fila, i) => <tr key={fila.idMovimiento ?? fila.idSolicitud ?? fila.idVuelo ?? fila.idCliente ?? i} className="border-t border-white/5 hover:bg-white/[0.02]">{reporte.columnas.map((columna) => <td key={columna.clave} className="max-w-[320px] px-4 py-3">{['valorTotal', 'monto', 'totalPagadoActual', 'saldoPendiente'].includes(columna.clave) ? (fila[columna.clave] == null ? 'No disponible' : dinero(fila[columna.clave])) : mostrar(fila[columna.clave])}</td>)}</tr>)}</tbody></table></div>}
+        </section>
       </main>
     </div>
   )

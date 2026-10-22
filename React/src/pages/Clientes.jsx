@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Clientes - Página de listado de clientes.
  *
  * Obtiene la lista de clientes desde el backend Java mediante fetch.
@@ -13,6 +13,20 @@ export default function Clientes() {
   const [clientes, setClientes] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [busqueda, setBusqueda] = useState('')
+
+  const termino = busqueda.trim().toLowerCase()
+  const clientesFiltrados = clientes.filter((cliente) => {
+    const datos = [
+      cliente.nombre,
+      cliente.apellido,
+      cliente.documento,
+      cliente.telefono,
+      cliente.correo
+    ].filter(Boolean).join(' ').toLowerCase()
+
+    return datos.includes(termino)
+  })
 
   useEffect(() => {
     fetchClientes()
@@ -50,11 +64,11 @@ export default function Clientes() {
               <p className="text-gray-400 text-sm mt-1">Gestión de perfiles VIP y registros históricos.</p>
             </div>
             <div className="flex flex-col sm:flex-row w-full md:w-auto gap-4">
-              <form onSubmit={(e) => { e.preventDefault(); /* TODO: implementar búsqueda */ }} className="relative group">
+              <form onSubmit={(e) => e.preventDefault()} className="relative group">
                 <i className="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-dorado transition-colors"></i>
                 <input
                   type="text"
-                  placeholder="Buscar cliente..."
+                  placeholder="Buscar por nombre, documento, teléfono o correo..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
                   className="bg-surface border border-white/10 rounded-full pl-11 pr-6 py-2.5 text-sm w-full sm:w-64 focus:outline-none focus:border-dorado transition-all"
                 />
               </form>
@@ -89,12 +103,12 @@ export default function Clientes() {
                       <td colSpan="6" className="px-6 py-8 text-center text-gray-500">Cargando...</td>
                     </tr>
                   )}
-                  {!loading && clientes.length === 0 && (
+                  {!loading && clientesFiltrados.length === 0 && (
                     <tr>
-                      <td colSpan="6" className="px-6 py-8 text-center text-gray-500">No hay clientes registrados.</td>
+                      <td colSpan="6" className="px-6 py-8 text-center text-gray-500">{busqueda.trim() ? "No se encontraron clientes con esa búsqueda." : "No hay clientes registrados."}</td>
                     </tr>
                   )}
-                  {!loading && clientes.map((cliente) => (
+                  {!loading && clientesFiltrados.map((cliente) => (
                     <tr key={cliente.idCliente} className="hover:bg-white/[0.02] transition-colors">
                       <td className="px-6 py-4 text-sm font-mono text-gray-500">CF-{cliente.idCliente}</td>
                       <td className="px-6 py-4">
@@ -127,3 +141,4 @@ export default function Clientes() {
     </div>
   )
 }
+

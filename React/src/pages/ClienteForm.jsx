@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ClienteForm - Formulario de registro y edición de clientes.
  *
  * En modo edición carga los datos del cliente por ID.
@@ -42,7 +42,14 @@ export default function ClienteForm() {
   }
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
+    const { name, value } = e.target
+
+    if (name === 'telefono') {
+      setFormData(prev => ({ ...prev, telefono: value.replace(/\D/g, '').slice(0, 15) }))
+      return
+    }
+
+    setFormData(prev => ({ ...prev, [name]: value }))
   }
 
   const handleSubmit = async (e) => {
@@ -54,6 +61,9 @@ export default function ClienteForm() {
       } else {
         await createCliente(formData)
       }
+      alert(id && id !== '0'
+        ? 'Cliente actualizado correctamente.'
+        : 'Cliente registrado correctamente.')
       navigate('/clientes')
     } catch (err) {
       setError(err.message)
@@ -85,28 +95,28 @@ export default function ClienteForm() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-widest text-gray-400" htmlFor="nombre">Nombre</label>
-                <input type="text" id="nombre" name="nombre" value={formData.nombre} onChange={handleChange} placeholder="Ej. Juan" className="w-full bg-darkbg border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-dorado transition-colors" required />
+                <input type="text" id="nombre" name="nombre" maxLength={50} value={formData.nombre} onChange={handleChange} placeholder="Ej. Juan" className="w-full bg-darkbg border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-dorado transition-colors" required />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-widest text-gray-400" htmlFor="apellido">Apellido</label>
-                <input type="text" id="apellido" name="apellido" value={formData.apellido} onChange={handleChange} placeholder="Ej. Pérez" className="w-full bg-darkbg border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-dorado transition-colors" required />
+                <input type="text" id="apellido" name="apellido" maxLength={50} value={formData.apellido} onChange={handleChange} placeholder="Ej. Pérez" className="w-full bg-darkbg border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-dorado transition-colors" required />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-widest text-gray-400" htmlFor="documento">Documento / Pasaporte</label>
-                <input type="text" id="documento" name="documento" value={formData.documento} onChange={handleChange} placeholder="Ej. A12345678" className="w-full bg-darkbg border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-dorado transition-colors" required />
+                <input type="text" id="documento" name="documento" maxLength={20} value={formData.documento} onChange={handleChange} placeholder="Ej. A12345678" className="w-full bg-darkbg border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-dorado transition-colors" required />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-widest text-gray-400" htmlFor="telefono">Teléfono</label>
-                <input type="tel" id="telefono" name="telefono" value={formData.telefono} onChange={handleChange} placeholder="Ej. +34 600 000 000" className="w-full bg-darkbg border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-dorado transition-colors" required />
+                <input type="tel" id="telefono" name="telefono" inputMode="numeric" maxLength={15} value={formData.telefono} onChange={handleChange} placeholder="Ej. +34 600 000 000" className="w-full bg-darkbg border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-dorado transition-colors" required />
               </div>
             </div>
 
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-widest text-gray-400" htmlFor="correo">Correo Electrónico</label>
-              <input type="email" id="correo" name="correo" value={formData.correo} onChange={handleChange} placeholder="juan.perez@ejemplo.com" className="w-full bg-darkbg border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-dorado transition-colors" required />
+              <input type="email" id="correo" name="correo" maxLength={100} value={formData.correo} onChange={handleChange} placeholder="juan.perez@ejemplo.com" className="w-full bg-darkbg border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-dorado transition-colors" required />
             </div>
 
             <div className="pt-6 flex flex-col md:flex-row gap-4">
@@ -124,3 +134,4 @@ export default function ClienteForm() {
     </div>
   )
 }
+
