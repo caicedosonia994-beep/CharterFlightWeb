@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   createMovimientoPago,
   createOperacionCobrable,
@@ -42,6 +42,7 @@ export default function Pagos() {
   const [operacionSeleccionada, setOperacionSeleccionada] = useState(null)
   const [movimientos, setMovimientos] = useState([])
   const [cargando, setCargando] = useState(true)
+  const cargaActual = useRef(0)
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
   const [mensaje, setMensaje] = useState('')
@@ -53,25 +54,37 @@ export default function Pagos() {
   const [pagoAntiguo, setPagoAntiguo] = useState({ idReserva: '', monto: '', numeroFactura: '', fechaPago: '', estado: 'Pagado' })
 
   const cargar = useCallback(async () => {
+    const idCarga = ++cargaActual.current
     setCargando(true)
     setError('')
-    try {
-      const [oldPays, bookings, flights, specialRequests, accounts] = await Promise.all([
-        getPagos(), getReservas(), getVuelos(), getSolicitudesEspeciales(), getOperacionesCobrables(),
-      ])
-      setPagosAntiguos(oldPays)
-      setReservas(bookings)
-      setVuelos(flights)
-      setSolicitudes(specialRequests)
-      setOperaciones(accounts)
-    } catch (err) {
-      setError(err.message || 'No fue posible cargar la información de pagos.')
-    } finally { setCargando(false) }
+
+    const cargarRecurso = async (nombre, solicitud, actualizar) => {
+      try {
+        const datos = await solicitud()
+        if (cargaActual.current === idCarga) actualizar(datos)
+      } catch (err) {
+        if (cargaActual.current !== idCarga) return
+        const detalle = err.message || 'Error desconocido.'
+        setError((actual) => actual ? `${actual} ${nombre}: ${detalle}` : `${nombre}: ${detalle}`)
+      }
+    }
+
+    await Promise.all([
+      cargarRecurso('Pagos', getPagos, setPagosAntiguos),
+      cargarRecurso('Reservas', getReservas, setReservas),
+      cargarRecurso('Vuelos', getVuelos, setVuelos),
+      cargarRecurso('Solicitudes especiales', getSolicitudesEspeciales, setSolicitudes),
+      cargarRecurso('Operaciones cobrables', getOperacionesCobrables, setOperaciones),
+    ])
+    if (cargaActual.current === idCarga) setCargando(false)
   }, [])
 
   useEffect(() => {
     const timer = window.setTimeout(cargar, 0)
-    return () => window.clearTimeout(timer)
+    return () => {
+      window.clearTimeout(timer)
+      cargaActual.current += 1
+    }
   }, [cargar])
 
   const vuelosPorId = useMemo(() => new Map(vuelos.map((vuelo) => [Number(vuelo.idVuelo), vuelo])), [vuelos])
